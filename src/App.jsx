@@ -4,6 +4,7 @@ import {
   Route,
   Link
 } from "react-router-dom";
+import "./App.css";
 
 import About from "./Pages/About";
 import HomePage from "./Pages/HomePage";
@@ -21,8 +22,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/about" element={<About/>}/>
-        <Route path="/HomePage/home" element={<HomePage/>}/>
-        <Route path="/BookingPage/booking" element={<BookingPage/>}/>
+        <Route path="/" element={<HomePage/>}/>
+        <Route path="/booking" element={<BookingPage/>}/>
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
