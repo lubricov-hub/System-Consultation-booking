@@ -5,9 +5,11 @@ import {
   Link
 } from "react-router-dom";
 
-import Home from "./Pages/Home";
 import About from "./Pages/About";
-import Dashboard from "./Pages/dashboard";
+import HomePage from "./Pages/HomePage";
+import BookingPage from "./Pages/BookingPage";
+
+
 
 
 function NotFound() {
@@ -18,9 +20,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
         <Route path="/about" element={<About/>}/>
-        <Route path="/dashboard" element={<Dashboard/>}/>
+        <Route path="/HomePage/home" element={<HomePage/>}/>
+        <Route path="/BookingPage/booking" element={<BookingPage/>}/>
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
