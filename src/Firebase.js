@@ -1,25 +1,24 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import {getAuth} from "firebase/auth";
-import {getDatabase} from "firebase/database";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBxcnH_t48GaZzbsNHPKfGqsO9RU2ARfZc",
-  authDomain: "teacher-consultation-sys-6519c.firebaseapp.com",
-  projectId: "teacher-consultation-sys-6519c",
-  storageBucket: "teacher-consultation-sys-6519c.firebasestorage.app",
-  messagingSenderId: "935608644778",
-  appId: "1:935608644778:web:904a992e329da3bd9a0cd3",
-  measurementId: "G-MKHJ33RPLB"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 export const db = getDatabase(app);
-const analytics = getAnalytics(app);
+
+// Only initialize analytics in browser (prevents SSR errors)
+export const analytics =
+  typeof window !== "undefined" ? getAnalytics(app) : null;
