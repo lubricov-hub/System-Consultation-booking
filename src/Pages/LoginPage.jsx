@@ -1,4 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {auth, db} from  "../Firebase.js";
+import {Link} from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { ref, get } from "firebase/database";
 
 const COLORS = {
   accent: "#6C63FF",
@@ -15,10 +20,8 @@ const COLORS = {
   error: "#EF4444",
 };
 
-const STUDENT_CREDENTIALS = { email: "student@school.edu", password: "student123" };
-const TEACHER_CREDENTIALS = { email: "teacher@school.edu", password: "teacher123" };
-
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [role, setRole] = useState("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,21 +32,56 @@ export default function LoginPage() {
 
   const isTeacher = role === "teacher";
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
-    const creds = isTeacher ? TEACHER_CREDENTIALS : STUDENT_CREDENTIALS;
-    if (!email || !password) { setError("Please fill in all fields."); return; }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (email === creds.email && password === creds.password) {
-        setLoggedIn(role);
-      } else {
-        setError("Invalid email or password. Try the demo credentials below.");
-      }
-    }, 1000);
-  };
 
+    if (!email || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 🔐 Login with Firebase Auth
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCred.user;
+
+
+      // ✅ Store UID in localStorage
+      localStorage.setItem("uid", user.uid);
+
+      // 📡 Fetch user data from Realtime DB
+      const userRef = ref(db, `users/${user.uid}`);
+      const snapshot = await get(userRef);
+
+      if (snapshot.exists()) {
+        const userData = snapshot.val();
+
+        // ✅ store role
+        localStorage.setItem("role", userData.role);
+
+        setLoggedIn(userData.role);
+
+        // 🚀 Redirect
+        setTimeout(() => {
+          if (userData.role === "teacher") {
+            navigate("/teacher"); // or setup
+          } else {
+            navigate("/");
+          }
+        }, 1000);
+
+      } else {
+        setError("User data not found in database.");
+      }
+
+    } catch (err) {
+      setError("Invalid email or password.");
+    } finally {
+      setLoading(false);
+    }
+  };
   const switchRole = (r) => {
     setRole(r);
     setEmail("");
@@ -51,26 +89,8 @@ export default function LoginPage() {
     setError("");
   };
 
-  if (loggedIn) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ textAlign: "center", padding: 48 }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>{loggedIn === "teacher" ? "🎓" : "📚"}</div>
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-            Welcome, {loggedIn === "teacher" ? "Ms. Garcia!" : "Student!"}
-          </h2>
-          <p style={{ color: COLORS.textMuted, marginBottom: 28 }}>
-            Redirecting you to the {loggedIn === "teacher" ? "Teacher Portal" : "Student Dashboard"}...
-          </p>
-          <div style={{ display: "inline-block", width: 40, height: 40, border: `4px solid ${COLORS.accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <div style={{ marginTop: 24 }}>
-            <button onClick={() => { setLoggedIn(null); setEmail(""); setPassword(""); }} style={{ background: "none", border: "none", color: COLORS.accent, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>← Back to Login</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  
+
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
@@ -108,8 +128,8 @@ export default function LoginPage() {
           {/* Demo credentials hint */}
           <div style={{ background: "#ffffff18", backdropFilter: "blur(8px)", borderRadius: 14, padding: "16px 24px", textAlign: "left" }}>
             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Demo Credentials</div>
-            <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 4 }}>📧 {isTeacher ? TEACHER_CREDENTIALS.email : STUDENT_CREDENTIALS.email}</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>🔑 {isTeacher ? TEACHER_CREDENTIALS.password : STUDENT_CREDENTIALS.password}</div>
+            <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 4 }}>📧 {isTeacher ? "myemail@gmail.com" : "mystuemail@gmail.com" }</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>🔑 {isTeacher ?" tech213" : "stu3321"}</div>
           </div>
         </div>
       </div>
@@ -257,13 +277,7 @@ export default function LoginPage() {
 
         {/* Quick switch hint */}
         <div style={{ textAlign: "center", fontSize: 13, color: COLORS.textMuted }}>
-          {isTeacher ? "Are you a student?" : "Are you a teacher?"}{" "}
-          <button
-            onClick={() => switchRole(isTeacher ? "student" : "teacher")}
-            style={{ background: "none", border: "none", color: isTeacher ? COLORS.accent : COLORS.teacher, fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}
-          >
-            Switch to {isTeacher ? "Student" : "Teacher"} login
-          </button>
+          Are you new? <Link to="/register" className=" underline text-accent hover:text-accentDark font-bold">Register</Link>
         </div>
 
         {/* Footer */}

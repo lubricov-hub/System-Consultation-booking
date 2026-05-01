@@ -41,7 +41,7 @@ export default function AppointmentsPage() {
               You haven't booked any teacher consultations yet. Start by scheduling your first appointment.
             </p>
             <button
-              onClick={() => navigate("/book")}
+              onClick={() => navigate("/booking")}
               className="bg-slate-900 hover:bg-slate-700 text-white font-semibold text-sm px-8 py-3.5 rounded-xl shadow-md transition-all hover:-translate-y-0.5"
             >
               Book Your First Consultation

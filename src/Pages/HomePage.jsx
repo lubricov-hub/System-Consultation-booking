@@ -11,7 +11,10 @@ import {
   Sparkles,
   ChevronRight,
   Bell,
+  Power
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import LogoutButton from "../components/Logout.jsx";
 
 /* ─── tiny hook for staggered mount animations ─── */
 function useReveal(count = 1, delayMs = 80) {
@@ -129,13 +132,15 @@ export default function HomePage() {
             <span className="font-bold text-slate-800 text-sm tracking-tight">EduBook</span>
           </div>
           <div className="flex items-center gap-3">
-            <button className="text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
+            <Link to="/appointments" className="text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
               My Appointments
-            </button>
+            </Link>
             <button className="relative p-1.5 text-slate-400 hover:text-slate-700 transition-colors">
               <Bell className="w-4.5 h-4.5" />
               <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-blue-500 rounded-full" />
             </button>
+
+            <LogoutButton />
           </div>
         </div>
       </nav>
@@ -181,14 +186,14 @@ export default function HomePage() {
       <div
         className={`flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 px-6 transition-all duration-500 delay-300 ${heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}
       >
-        <button className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold text-[0.95rem] px-8 py-4 rounded-xl shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95">
+        <Link to="/booking" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold text-[0.95rem] px-8 py-4 rounded-xl shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95">
           Book a Teacher Consultation
           <ArrowRight className="w-4 h-4" />
-        </button>
-        <button className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[0.95rem] px-8 py-4 rounded-xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
+        </Link>
+        <Link to="/appointments" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[0.95rem] px-8 py-4 rounded-xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
           View My Appointments
           <ChevronRight className="w-4 h-4 text-slate-400" />
-        </button>
+        </Link>
       </div>
 
       {/* ── INFO CARDS ── */}
