@@ -27,7 +27,7 @@ export default function LogoutButton() {
       {/* Trigger button — drop this anywhere in your nav */}
       <button
         onClick={() => setOpen(true)}
-        className="relative p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+        className="relative p-1.5 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
       >
         <Power className="w-4.5 h-4.5" />
       </button>

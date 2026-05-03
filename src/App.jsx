@@ -11,7 +11,7 @@ import BookingPage from "./Pages/BookingPage";
 import ConfirmedPage from "./Pages/ConfirmedPage";
 import AppointmentsPage from "./Pages/AppointmentPage";
 import LoginPage from "./Pages/LoginPage";
-import TeacherModule from "./Pages/TeacherModule";
+import TeacherModule from "./Teacher/TeacherModule";
 import Register from "./Pages/Register";
 
 import ProtectedRoute from "./ProtectedRoute";
