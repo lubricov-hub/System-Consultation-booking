@@ -1,8 +1,9 @@
 import {
   BrowserRouter as Router,
   Routes,
-  Route
+  Route,
 } from "react-router-dom";
+
 import "./App.css";
 
 import About from "./Pages/About";
@@ -12,6 +13,7 @@ import ConfirmedPage from "./Pages/ConfirmedPage";
 import AppointmentsPage from "./Pages/AppointmentPage";
 import LoginPage from "./Pages/LoginPage";
 import TeacherModule from "./Teacher/TeacherModule";
+import AdminModule from "./Admin/AdminModule";
 import Register from "./Pages/Register";
 
 import ProtectedRoute from "./ProtectedRoute";
@@ -29,47 +31,23 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Home (must be logged in) */}
+        {/* Protected Routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/booking" element={<BookingPage />} />
+        <Route path="/confirmed" element={<ConfirmedPage />} />
+        <Route path="/appointments" element={<AppointmentsPage />} />
+
+        {/* Admin Only */}
         <Route
-          path="/"
+          path="/admin"
           element={
-            <ProtectedRoute requiredRole="student">
-              <HomePage />
+            <ProtectedRoute requiredRole="admin">
+              <AdminModule />
             </ProtectedRoute>
           }
         />
 
-        {/* Booking (must be logged in) */}
-        <Route
-          path="/booking"
-          element={
-            <ProtectedRoute requiredRole="student">
-              <BookingPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Confirmed (must be logged in) */}
-        <Route
-          path="/confirmed"
-          element={
-            <ProtectedRoute requiredRole="student">
-              <ConfirmedPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Appointments (must be logged in) */}
-        <Route
-          path="/appointments"
-          element={
-            <ProtectedRoute requiredRole="student">
-              <AppointmentsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Teacher ONLY */}
+        {/* Teacher Only */}
         <Route
           path="/teacher"
           element={

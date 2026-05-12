@@ -14,8 +14,7 @@ function DetailRow({ icon: Icon, label, value }) {
     </div>
   );
 }
-
-export default function ConfirmedPage() {
+ export default function ConfirmedPage() {
   const navigate = useNavigate();
   const location = useLocation();
 

@@ -4,7 +4,7 @@ import Badge from "./Badge";
 export default function AppointmentRow({ appt, onView }) {
   return (
     <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-      <td style={{ padding: "14px 16px", fontWeight: 600, color: COLORS.text }}>{appt.student}</td>
+      <td style={{ padding: "14px 16px", fontWeight: 600, color: COLORS.text }}>{appt.studentID}</td>
       <td style={{ padding: "14px 16px", color: COLORS.textMuted, fontSize: 13 }}>{appt.topic}</td>
       <td style={{ padding: "14px 16px", color: COLORS.textMuted, fontSize: 13 }}>{appt.date}</td>
       <td style={{ padding: "14px 16px", color: COLORS.textMuted, fontSize: 13 }}>{appt.time}</td>

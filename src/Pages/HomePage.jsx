@@ -11,10 +11,10 @@ import {
   Sparkles,
   ChevronRight,
   Bell,
-  Power
+  Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import LogoutButton from "../components/Logout.jsx";
+import CheckAppointmentModal from "../components/CheckAppointmentModal";
 
 /* ─── tiny hook for staggered mount animations ─── */
 function useReveal(count = 1, delayMs = 80) {
@@ -70,10 +70,10 @@ const EXPECT = [
 ];
 
 const TOPICS = [
-  { icon: BookOpen, label: "Academic Progress Review" },
+  { icon: BookOpen,      label: "Academic Progress Review" },
   { icon: ClipboardList, label: "Assignment Help & Guidance" },
   { icon: GraduationCap, label: "Course Selection & Planning" },
-  { icon: HelpCircle, label: "General Questions & Support" },
+  { icon: HelpCircle,    label: "General Questions & Support" },
 ];
 
 /* ─── sub-components ─── */
@@ -111,8 +111,9 @@ function TopicItem({ icon: Icon, label }) {
 /* ─── main component ─── */
 export default function HomePage() {
   const stepVisible = useReveal(3, 100);
-  const [heroVisible, setHeroVisible] = useState(false);
-  const [infoVisible, setInfoVisible] = useState(false);
+  const [heroVisible, setHeroVisible]   = useState(false);
+  const [infoVisible, setInfoVisible]   = useState(false);
+  const [showCheckModal, setShowCheckModal] = useState(false);  // ← new
 
   useEffect(() => {
     setTimeout(() => setHeroVisible(true), 60);
@@ -132,22 +133,24 @@ export default function HomePage() {
             <span className="font-bold text-slate-800 text-sm tracking-tight">EduBook</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/appointments" className="text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
-              My Appointments
-            </Link>
+            {/* ── Check Appointment button ── */}
+            <button
+              onClick={() => setShowCheckModal(true)}
+              className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 text-sm font-semibold border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-1.5 rounded-lg transition-all"
+            >
+              <Search className="w-3.5 h-3.5" />
+              Check Appointment
+            </button>
             <button className="relative p-1.5 text-slate-400 hover:text-slate-700 transition-colors">
-              <Bell className="w-4.5 h-4.5" />
+              <Bell className="w-4 h-4" />
               <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-blue-500 rounded-full" />
             </button>
-
-            <LogoutButton />
           </div>
         </div>
       </nav>
 
       {/* ── HERO ── */}
       <section className="max-w-3xl mx-auto text-center px-6 pt-16 pb-12">
-        {/* badge */}
         <div
           className={`inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 border border-blue-100 transition-all duration-500 ${heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
         >
@@ -186,21 +189,28 @@ export default function HomePage() {
       <div
         className={`flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 px-6 transition-all duration-500 delay-300 ${heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}
       >
-        <Link to="/booking" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold text-[0.95rem] px-8 py-4 rounded-xl shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95">
+        <Link
+          to="/booking"
+          className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold text-[0.95rem] px-8 py-4 rounded-xl shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+        >
           Book a Teacher Consultation
           <ArrowRight className="w-4 h-4" />
         </Link>
-        <Link to="/appointments" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[0.95rem] px-8 py-4 rounded-xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
-          View My Appointments
+
+        {/* ── Check Appointment CTA (hero level) ── */}
+        <button
+          onClick={() => setShowCheckModal(true)}
+          className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[0.95rem] px-8 py-4 rounded-xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95"
+        >
+          Check Appointment Status
           <ChevronRight className="w-4 h-4 text-slate-400" />
-        </Link>
+        </button>
       </div>
 
       {/* ── INFO CARDS ── */}
       <section
         className={`max-w-5xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 gap-4 pb-20 transition-all duration-600 ${infoVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       >
-        {/* What to Expect */}
         <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm ring-1 ring-slate-100">
           <h4 className="font-bold text-slate-800 text-base mb-6">What to Expect</h4>
           <ul className="space-y-4">
@@ -213,7 +223,6 @@ export default function HomePage() {
           </ul>
         </div>
 
-        {/* Consultation Topics */}
         <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm ring-1 ring-slate-100">
           <h4 className="font-bold text-slate-800 text-base mb-6">Consultation Topics</h4>
           <ul className="space-y-4">
@@ -223,6 +232,12 @@ export default function HomePage() {
           </ul>
         </div>
       </section>
+
+      {/* ── Modal ── */}
+      {showCheckModal && (
+        <CheckAppointmentModal onClose={() => setShowCheckModal(false)} />
+      )}
+
     </div>
   );
 }

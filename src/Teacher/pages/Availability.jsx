@@ -4,6 +4,7 @@ import { Card } from "../components/Card";
 
 import {  ref, get, update } from "firebase/database";
 import {db} from "../../Firebase";
+import { data } from "react-router-dom";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SLOTS = [
@@ -56,6 +57,8 @@ export default function Availability() {
             setEnabledSlots((prev) => ({ ...prev, ...data.slots }));
           }
         }
+
+        
         setStatus("idle");
       })
       .catch((err) => {
@@ -63,6 +66,9 @@ export default function Availability() {
         setErrMsg("Failed to load availability. Check your connection.");
         setStatus("error");
       });
+
+      console.log(enabledDays);
+      console.log(enabledSlots);
   }, [uid]);
 
   // ── Save using update() — only touches days & slots, leaves other fields ──

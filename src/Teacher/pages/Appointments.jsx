@@ -1,17 +1,59 @@
-import { useState } from "react";
-import { COLORS, MOCK_APPOINTMENTS } from "../constants";
+import { useState, useEffect } from "react";
+import { COLORS } from "../constants";
 import { Card } from "../components/Card";
 import AppointmentRow from "../components/AppointmentRow";
+import { db } from "../../Firebase.js";
+import { ref, get } from "firebase/database";
+
+async function fetchAppointmentsForTeacher() {
+  const uid = localStorage.getItem("uid");
+  if (!uid) return [];
+
+
+  const snap = await get(ref(db, "appointments"));
+  if (!snap.exists()) return [];
+
+
+  return Object.entries(snap.val())
+    .map(([id, data]) => ({ id, ...data }))
+    .filter((a) => a.teacherId === uid);
+}
 
 export default function Appointments({ onView }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filtered = MOCK_APPOINTMENTS.filter((a) => {
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true);
+        const data = await fetchAppointmentsForTeacher();
+
+        setAppointments(data);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load appointments.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  function handleStatusChange(id, newStatus) {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
+    );
+  }
+
+  const filtered = appointments.filter((a) => {
     const matchFilter = filter === "all" || a.status === filter;
     const matchSearch =
-      a.student.toLowerCase().includes(search.toLowerCase()) ||
-      a.topic.toLowerCase().includes(search.toLowerCase());
+      (a.studentName || "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.topic || "").toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
@@ -34,7 +76,7 @@ export default function Appointments({ onView }) {
             outline: "none",
           }}
         />
-        {["all", "upcoming", "completed", "cancelled"].map((f) => (
+        {["all", "pending", "confirmed", "cancelled"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -79,14 +121,32 @@ export default function Appointments({ onView }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={6} style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>
+                  Loading appointments...
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "red" }}>
+                  {error}
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>
                   No appointments found.
                 </td>
               </tr>
             ) : (
-              filtered.map((a) => <AppointmentRow key={a.id} appt={a} onView={onView} />)
+              filtered.map((a) => (
+                <AppointmentRow
+                  key={a.id}
+                  appt={a}
+                  onView={(appt) => onView(appt, handleStatusChange)}
+                />
+              ))
             )}
           </tbody>
         </table>

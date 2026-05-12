@@ -9,32 +9,33 @@ import History from "./pages/History";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import LogoutButton from "../components/Logout.jsx";
-import {db} from "../Firebase.js";
-import {ref, get} from "firebase/database";
+import { db } from "../Firebase.js";
+import { ref, get } from "firebase/database";
 
 export default function TeacherModule() {
   const [page, setPage] = useState("dashboard");
   const [modal, setModal] = useState(null);
-  const unread = 2;
   const [user, setUser] = useState(null);
+  const unread = 2;
 
   const userId = localStorage.getItem("uid");
 
   useEffect(() => {
-    if(userId){
+    if (userId) {
       const userRef = ref(db, `users/${userId}`);
       get(userRef).then((snapshot) => {
-        if (snapshot.exists()) {
-          const userData = snapshot.val();
-          setUser(userData);
-          console.log(userData);
-        }
+        if (snapshot.exists()) setUser(snapshot.val());
       });
     }
   }, []);
 
-  
+  function handleView(appt, onStatusChange) {
+    setModal({ appt, onStatusChange });
+  }
 
+  function handleModalClose() {
+    setModal(null);
+  }
 
   return (
     <div style={{ fontFamily: FONT, background: COLORS.bg, minHeight: "100vh", display: "flex" }}>
@@ -48,9 +49,7 @@ export default function TeacherModule() {
           display: "flex",
           flexDirection: "column",
           position: "fixed",
-          top: 0,
-          left: 0,
-          bottom: 0,
+          top: 0, left: 0, bottom: 0,
         }}
       >
         {/* Logo */}
@@ -95,8 +94,7 @@ export default function TeacherModule() {
                     background: COLORS.red,
                     color: "#fff",
                     borderRadius: "50%",
-                    width: 20,
-                    height: 20,
+                    width: 20, height: 20,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -112,12 +110,14 @@ export default function TeacherModule() {
         </nav>
 
         {/* User footer */}
-        <div className="flex justify-between " style={{ padding: "16px 24px 28px", borderTop: "1px solid #ffffff22" }}>
+        <div
+          className="flex justify-between"
+          style={{ padding: "16px 24px 28px", borderTop: "1px solid #ffffff22" }}
+        >
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 36, height: 36,
                 borderRadius: "50%",
                 background: COLORS.accent,
                 color: "#fff",
@@ -134,12 +134,10 @@ export default function TeacherModule() {
               <div style={{ color: "#ffffff66", fontSize: 11 }}>{user?.email}</div>
             </div>
           </div>
-                    {/* Logout button */}
           <div className="flex items-center justify-center">
             <LogoutButton />
           </div>
         </div>
-
       </div>
 
       {/* ── Main Content ── */}
@@ -152,17 +150,21 @@ export default function TeacherModule() {
           boxSizing: "border-box",
         }}
       >
-        {page === "dashboard"     && <Dashboard     onNav={setPage} onView={setModal} />}
-        {page === "schedule"      && <Schedule       onView={setModal} />}
-        {page === "appointments"  && <Appointments   onView={setModal} />}
+        {page === "dashboard"     && <Dashboard     onNav={setPage} onView={handleView} />}
+        {page === "schedule"      && <Schedule                       onView={handleView} />}
+        {page === "appointments"  && <Appointments                   onView={handleView} />}
         {page === "availability"  && <Availability />}
-        {page === "history"       && <History        onView={setModal} />}
+        {page === "history"       && <History                        onView={handleView} />}
         {page === "notifications" && <Notifications />}
         {page === "profile"       && <Profile />}
       </div>
 
       {/* ── Modal ── */}
-      <StudentModal appt={modal} onClose={() => setModal(null)} />
+      <StudentModal
+        appt={modal?.appt ?? null}
+        onClose={handleModalClose}
+        onStatusChange={modal?.onStatusChange ?? null}
+      />
     </div>
   );
 }

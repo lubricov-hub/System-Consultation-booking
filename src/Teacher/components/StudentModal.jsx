@@ -1,8 +1,34 @@
+import { useState } from "react";
 import { COLORS } from "../constants";
 import Badge from "./Badge";
+import { db } from "../../Firebase.js";
+import { ref, update } from "firebase/database";
 
-export default function StudentModal({ appt, onClose }) {
+export default function StudentModal({ appt, onClose, onStatusChange }) {
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState("");
+
   if (!appt) return null;
+
+  async function handleStatusUpdate(newStatus) {
+    setUpdating(true);
+    setError("");
+    try {
+      await update(ref(db, `appointments/${appt.id}`), { status: newStatus });
+      onStatusChange?.(appt.id, newStatus);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to update status. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  const isPending   = appt.status === "pending";
+  const isConfirmed = appt.status === "confirmed";
+  const isCancelled = appt.status === "cancelled";
+  const isCompleted = appt.status === "completed";
 
   return (
     <div
@@ -43,8 +69,7 @@ export default function StudentModal({ appt, onClose }) {
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
           <div
             style={{
-              width: 56,
-              height: 56,
+              width: 56, height: 56,
               borderRadius: "50%",
               background: COLORS.accent,
               display: "flex",
@@ -55,21 +80,23 @@ export default function StudentModal({ appt, onClose }) {
               fontWeight: 800,
             }}
           >
-            {appt.student[0]}
+            {(appt.studentName || "?")[0].toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>{appt.student}</div>
-            <div style={{ color: COLORS.textMuted, fontSize: 13 }}>{appt.email}</div>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>{appt.studentName}</div>
+            <div style={{ color: COLORS.textMuted, fontSize: 13 }}>{appt.studentEmail}</div>
           </div>
         </div>
 
         {/* Details */}
         {[
-          ["📅 Date", appt.date],
-          ["⏰ Time", appt.time],
-          ["📌 Topic", appt.topic],
-          ["📞 Phone", appt.phone || "—"],
-          ["📝 Notes", appt.notes || "No notes provided."],
+          ["📅 Date",       appt.date],
+          ["⏰ Time",       appt.time],
+          ["📌 Topic",      appt.topic],
+          ["🪪 Student ID", appt.studentID || "—"],
+          ["🎓 Year",       appt.yearLevel || "—"],
+          ["🏫 Section",    appt.section   || "—"],
+          ["📝 Notes",      appt.notes     || "No notes provided."],
         ].map(([label, val]) => (
           <div key={label} style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
             <span style={{ minWidth: 120, fontWeight: 600, fontSize: 13, color: COLORS.textMuted }}>{label}</span>
@@ -81,39 +108,129 @@ export default function StudentModal({ appt, onClose }) {
           <Badge status={appt.status} />
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button
+        {/* Error */}
+        {error && (
+          <p style={{ color: "red", fontSize: 13, marginTop: 12 }}>{error}</p>
+        )}
+
+        {/* ── Actions ── */}
+
+        {/* CANCELLED — read-only banner */}
+        {isCancelled && (
+          <div
             style={{
-              flex: 1,
-              background: COLORS.greenLight,
-              color: COLORS.green,
-              border: "none",
-              borderRadius: 10,
-              padding: "11px 0",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: "pointer",
-            }}
-          >
-            ✔ Confirm
-          </button>
-          <button
-            style={{
-              flex: 1,
+              marginTop: 24,
               background: COLORS.redLight,
-              color: COLORS.red,
-              border: "none",
               borderRadius: 10,
-              padding: "11px 0",
+              padding: "12px 0",
+              textAlign: "center",
+              color: COLORS.red,
               fontWeight: 700,
               fontSize: 14,
-              cursor: "pointer",
             }}
           >
-            ✕ Cancel
-          </button>
-        </div>
+            This appointment has been cancelled.
+          </div>
+        )}
+
+        {/* COMPLETED — read-only banner */}
+        {isCompleted && (
+          <div
+            style={{
+              marginTop: 24,
+              background: COLORS.greenLight,
+              borderRadius: 10,
+              padding: "12px 0",
+              textAlign: "center",
+              color: COLORS.green,
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            ✔ This appointment has been completed.
+          </div>
+        )}
+
+        {/* PENDING — Confirm + Cancel */}
+        {isPending && (
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button
+              disabled={updating}
+              onClick={() => handleStatusUpdate("confirmed")}
+              style={{
+                flex: 1,
+                background: updating ? "#e2e8f0" : COLORS.greenLight,
+                color: updating ? COLORS.textMuted : COLORS.green,
+                border: "none",
+                borderRadius: 10,
+                padding: "11px 0",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: updating ? "not-allowed" : "pointer",
+              }}
+            >
+              {updating ? "Updating..." : "✔ Confirm"}
+            </button>
+            <button
+              disabled={updating}
+              onClick={() => handleStatusUpdate("cancelled")}
+              style={{
+                flex: 1,
+                background: updating ? "#e2e8f0" : COLORS.redLight,
+                color: updating ? COLORS.textMuted : COLORS.red,
+                border: "none",
+                borderRadius: 10,
+                padding: "11px 0",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: updating ? "not-allowed" : "pointer",
+              }}
+            >
+              {updating ? "Updating..." : "✕ Cancel"}
+            </button>
+          </div>
+        )}
+
+        {/* CONFIRMED — Mark Completed + Cancel */}
+        {isConfirmed && (
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button
+              disabled={updating}
+              onClick={() => handleStatusUpdate("completed")}
+              style={{
+                flex: 1,
+                background: updating ? "#e2e8f0" : "#eff6ff",
+                color: updating ? COLORS.textMuted : "#3b82f6",
+                border: "none",
+                borderRadius: 10,
+                padding: "11px 0",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: updating ? "not-allowed" : "pointer",
+              }}
+            >
+              {updating ? "Updating..." : "✔ Mark as Completed"}
+            </button>
+            <button
+              disabled={updating}
+              onClick={() => handleStatusUpdate("cancelled")}
+              style={{
+                flex: 1,
+                background: updating ? "#e2e8f0" : COLORS.redLight,
+                color: updating ? COLORS.textMuted : COLORS.red,
+                border: "none",
+                borderRadius: 10,
+                padding: "11px 0",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: updating ? "not-allowed" : "pointer",
+              }}
+            >
+              {updating ? "Updating..." : "✕ Cancel"}
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );

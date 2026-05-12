@@ -2,12 +2,21 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, get } from "firebase/database";
-import { ShieldX, HomeIcon, GraduationCap } from "lucide-react";
+import { ShieldX, GraduationCap, ShieldCheck } from "lucide-react";
 import { auth, db } from "./Firebase";
 
+// ── Unauthorized Modal ────────────────────────────────────────────────────────
 function UnauthorizedModal({ role }) {
   const navigate = useNavigate();
-  const isStudent = role === "student";
+
+  // Redirect destination based on their actual role
+  const destination = role === "admin" ? "/admin" : "/teacher";
+  const icon        = role === "admin"
+    ? <ShieldCheck className="w-4 h-4" />
+    : <GraduationCap className="w-4 h-4" />;
+  const label       = role === "admin"
+    ? "Back to Admin Dashboard"
+    : "Back to Teacher Dashboard";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -24,25 +33,25 @@ function UnauthorizedModal({ role }) {
         </div>
 
         <button
-          onClick={() => navigate(isStudent ? "/" : "/teacher")}
+          onClick={() => navigate(destination)}
           className="flex items-center gap-2 w-full justify-center px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 active:scale-95 text-white text-sm font-medium transition-all"
         >
-          {isStudent ? (
-            <HomeIcon className="w-4 h-4" />
-          ) : (
-            <GraduationCap className="w-4 h-4" />
-          )}
-          {isStudent ? "Back to Home" : "Back to Teacher Dashboard"}
+          {icon}
+          {label}
         </button>
       </div>
     </div>
   );
 }
 
+// ── Protected Route ───────────────────────────────────────────────────────────
+// Allowed roles: "teacher" | "admin"
+// Students hitting any protected route are redirected to /login since they
+// have no portal in this app.
 export default function ProtectedRoute({ children, requiredRole }) {
-  const [loading, setLoading] = useState(true);
-  const [allowed, setAllowed] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [allowed,     setAllowed]     = useState(false);
+  const [userRole,    setUserRole]    = useState(null);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -54,25 +63,35 @@ export default function ProtectedRoute({ children, requiredRole }) {
       }
 
       try {
-        const userRef = ref(db, `users/${user.uid}`);
-        const snapshot = await get(userRef);
+        const snapshot = await get(ref(db, `users/${user.uid}`));
 
         if (snapshot.exists()) {
           const data = snapshot.val();
-          localStorage.setItem("uid", user.uid);
-          localStorage.setItem("role", data.role);
-          setUserRole(data.role);
+          const role = data.role;
 
-          if (!requiredRole || data.role === requiredRole || data.role === "admin") {
+          // Persist to localStorage for downstream use
+          localStorage.setItem("uid",  user.uid);
+          localStorage.setItem("role", role);
+          setUserRole(role);
+
+          // Only teacher and admin can access the app
+          const isPermittedRole = role === "teacher" || role === "admin";
+
+          if (!isPermittedRole) {
+            // Student or unknown role → treat as unauthorized
+            setAllowed(false);
+          } else if (!requiredRole || role === requiredRole || role === "admin") {
+            // Admin can access any route; teacher can access their own routes
             setAllowed(true);
           } else {
             setAllowed(false);
           }
         } else {
+          // No DB record found
           setAllowed(false);
         }
       } catch (err) {
-        console.error(err);
+        console.error("ProtectedRoute error:", err);
         setAllowed(false);
       }
 
@@ -82,6 +101,7 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return () => unsubscribe();
   }, [requiredRole]);
 
+  // ── Loading spinner ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center">
@@ -94,8 +114,10 @@ export default function ProtectedRoute({ children, requiredRole }) {
     );
   }
 
+  // ── Not logged in → /login ───────────────────────────────────────────────
   if (notLoggedIn) return <Navigate to="/login" />;
 
+  // ── Logged in but wrong role → modal ────────────────────────────────────
   if (!allowed) return <UnauthorizedModal role={userRole} />;
 
   return children;
