@@ -1,23 +1,62 @@
-import { useState } from "react";
-import { COLORS, MOCK_TEACHERS, MOCK_APPOINTMENTS } from "../constants";
+import { useState, useEffect } from "react";
+import { COLORS } from "../constants";
 import { Card, StatCard, Badge } from "../components/AdminUI";
 import AddTeacherModal from "../components/AddTeacherModal";
+import { db } from "../../Firebase.js";
+import { ref, get } from "firebase/database";
+
+async function fetchAllData() {
+  const [teachersSnap, appointmentsSnap] = await Promise.all([
+    get(ref(db, "users")),
+    get(ref(db, "appointments")),
+  ]);
+
+  const teachers = teachersSnap.exists()
+    ? Object.entries(teachersSnap.val())
+        .map(([uid, data]) => ({ uid, ...data }))
+        .filter((u) => u.role === "teacher")
+    : [];
+
+  const appointments = appointmentsSnap.exists()
+    ? Object.entries(appointmentsSnap.val()).map(([id, data]) => ({ id, ...data }))
+    : [];
+
+  return { teachers, appointments };
+}
 
 export default function AdminDashboard() {
-  const [teachers, setTeachers] = useState(MOCK_TEACHERS);
-  const [showModal, setShowModal] = useState(false);
+  const [teachers, setTeachers]         = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState("");
+  const [showModal, setShowModal]       = useState(false);
 
-  // ── Derived stats from mock data ──────────────────────────────────────────
-  const total       = MOCK_APPOINTMENTS.length;
-  const upcoming    = MOCK_APPOINTMENTS.filter(a => a.status === "upcoming").length;
-  const completed   = MOCK_APPOINTMENTS.filter(a => a.status === "completed").length;
-  const missedOrCancelled = MOCK_APPOINTMENTS.filter(
-    a => a.status === "missed" || a.status === "cancelled"
-  ).length;
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true);
+        const { teachers, appointments } = await fetchAllData();
+        setTeachers(teachers);
+        setAppointments(appointments);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load dashboard data.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
-  // ── When a new teacher is created from the modal, append to list ──────────
+  // ── Derived stats ──────────────────────────────────────────────────────────
+  const total              = appointments.length;
+  const upcoming           = appointments.filter((a) => a.status === "pending" || a.status === "confirmed").length;
+  const completed          = appointments.filter((a) => a.status === "completed").length;
+  const missedOrCancelled  = appointments.filter((a) => a.status === "cancelled").length;
+
+  // ── When a new teacher is created from the modal ───────────────────────────
   const handleTeacherAdded = (newTeacher) => {
-    setTeachers(prev => [
+    setTeachers((prev) => [
       {
         uid:         newTeacher.uid,
         displayName: newTeacher.displayName,
@@ -30,6 +69,22 @@ export default function AdminDashboard() {
       ...prev,
     ]);
   };
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: COLORS.textMuted, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: "red", fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
@@ -97,7 +152,7 @@ export default function AdminDashboard() {
           sub="This month"
         />
         <StatCard
-          label="Missed / Cancelled"
+          label="Cancelled"
           value={missedOrCancelled}
           icon="❌"
           color={COLORS.red}
@@ -108,9 +163,15 @@ export default function AdminDashboard() {
       {/* ── Bottom grid: Teachers + Recent Appointments ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 24 }}>
 
-        {/* Teachers table */}
+        {/* ── Teachers Table ── */}
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{
+            padding: "20px 24px 16px",
+            borderBottom: `1px solid ${COLORS.border}`,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
             <h3 style={{ margin: 0, fontWeight: 800, fontSize: 16, color: COLORS.text }}>
               Registered Teachers
             </h3>
@@ -121,7 +182,7 @@ export default function AdminDashboard() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: COLORS.bg }}>
-                {["Name", "Department", "Teacher ID", "Email"].map(h => (
+                {["Name", "Department", "Teacher ID", "Email"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -140,76 +201,90 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {teachers.map((t, i) => {
-                const initials = (
-                  (t.displayName?.split(" ")[0]?.[0] ?? "") +
-                  (t.displayName?.split(" ").at(-1)?.[0] ?? "")
-                ).toUpperCase();
+              {teachers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: 24, textAlign: "center", color: COLORS.textMuted, fontSize: 13 }}>
+                    No teachers registered yet.
+                  </td>
+                </tr>
+              ) : (
+                teachers.map((t, i) => {
+                  const initials = (
+                    (t.firstName?.split(" ")[0]?.[0] ?? "") +
+                    (t.lastName?.split(" ").at(-1)?.[0] ?? "")
+                  ).toUpperCase();
 
-                return (
-                  <tr
-                    key={t.uid}
-                    style={{
-                      borderBottom: i < teachers.length - 1 ? `1px solid ${COLORS.border}` : "none",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = COLORS.bg}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                  >
-                    <td style={{ padding: "13px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div
+                  return (
+                    <tr
+                      key={t.uid}
+                      style={{
+                        borderBottom: i < teachers.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.bg)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <td style={{ padding: "13px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: "50%",
+                              background: COLORS.accent,
+                              color: "#fff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials}
+                          </div>
+                          <span style={{ fontWeight: 600, fontSize: 13, color: COLORS.text }}>
+                            {t.firstName + " " + t.lastName}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "13px 16px", fontSize: 13, color: COLORS.textMuted }}>
+                        {t.department || "—"}
+                      </td>
+                      <td style={{ padding: "13px 16px" }}>
+                        <span
                           style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: "50%",
-                            background: COLORS.accent,
-                            color: "#fff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            background: COLORS.accentLight,
+                            color: COLORS.accent,
+                            borderRadius: 8,
+                            padding: "3px 10px",
                             fontSize: 12,
-                            fontWeight: 800,
-                            flexShrink: 0,
+                            fontWeight: 700,
                           }}
                         >
-                          {initials}
-                        </div>
-                        <span style={{ fontWeight: 600, fontSize: 13, color: COLORS.text }}>
-                          {t.displayName}
+                          {t.teacherID || "Pending"}
                         </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: "13px 16px", fontSize: 13, color: COLORS.textMuted }}>
-                      {t.department}
-                    </td>
-                    <td style={{ padding: "13px 16px" }}>
-                      <span
-                        style={{
-                          background: COLORS.accentLight,
-                          color: COLORS.accent,
-                          borderRadius: 8,
-                          padding: "3px 10px",
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {t.teacherID}
-                      </span>
-                    </td>
-                    <td style={{ padding: "13px 16px", fontSize: 12, color: COLORS.textMuted }}>
-                      {t.email}
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td style={{ padding: "13px 16px", fontSize: 12, color: COLORS.textMuted }}>
+                        {t.email}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </Card>
 
-        {/* Recent Appointments */}
+        {/* ── Recent Appointments ── */}
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{
+            padding: "20px 24px 16px",
+            borderBottom: `1px solid ${COLORS.border}`,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
             <h3 style={{ margin: 0, fontWeight: 800, fontSize: 16, color: COLORS.text }}>
               Recent Appointments
             </h3>
@@ -218,31 +293,48 @@ export default function AdminDashboard() {
             </span>
           </div>
           <div style={{ padding: "8px 0" }}>
-            {MOCK_APPOINTMENTS.slice(0, 7).map((a, i) => (
-              <div
-                key={a.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "12px 24px",
-                  borderBottom: i < 6 ? `1px solid ${COLORS.border}` : "none",
-                  gap: 12,
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = COLORS.bg}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {a.student}
-                  </div>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>
-                    {a.teacher} · {a.date}
-                  </div>
-                </div>
-                <Badge status={a.status} />
+            {appointments.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", color: COLORS.textMuted, fontSize: 13 }}>
+                No appointments yet.
               </div>
-            ))}
+            ) : (
+              appointments.slice(0, 7).map((a, i) => (
+                <div
+                  key={a.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "12px 24px",
+                    borderBottom: i < Math.min(appointments.length, 7) - 1 ? `1px solid ${COLORS.border}` : "none",
+                    gap: 12,
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.bg)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: COLORS.text,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {a.studentName}
+                    </div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>
+                      {a.teacherName ? `${a.teacherName} · ` : ""}{a.date}
+                    </div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
+                      {a.topic}
+                    </div>
+                  </div>
+                  <Badge status={a.status} />
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
